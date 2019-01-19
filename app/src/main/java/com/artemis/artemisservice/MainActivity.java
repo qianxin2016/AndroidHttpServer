@@ -42,8 +42,8 @@ public class MainActivity extends AppCompatActivity {
                 new AsyncTask<Void, Void, Void>() {
                     @Override
                     protected Void doInBackground(Void... voids) {
-                        testDevicesAPIGet();
-                        //testDevicesAPIPost();
+                        //testDevicesAPIGet();
+                        testDevicesAPIPost(true);
                         return null;
                     }
                 }.execute();
@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void testDevicesAPIPost() {
+    private void testDevicesAPIPost(boolean useJson) {
         try {
             String requestUrl = "http://localhost:6789/devices";
             URL url = new URL(requestUrl);
@@ -89,17 +89,24 @@ public class MainActivity extends AppCompatActivity {
             conn.setConnectTimeout(5 * 1000);
             conn.setReadTimeout(5 * 1000);
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
+            if (useJson) {
+                conn.setRequestProperty("Content-Type", "application/json");
+            }
             conn.connect();
 
-            // Send JSON request
-            DataOutputStream out = new DataOutputStream(conn.getOutputStream());
-            JSONObject obj = new JSONObject();
-            obj.put("command", "query_device");
-            String json = URLEncoder.encode(obj.toString(), "utf-8");
-            out.writeBytes(json);
-            out.flush();
-            out.close();
+            if (!useJson) {
+                // Use form format
+                String data = "id=1";
+                conn.getOutputStream().write(data.getBytes());
+            } else {
+                // Use JSON format
+                DataOutputStream out = new DataOutputStream(conn.getOutputStream());
+                JSONObject obj = new JSONObject();
+                obj.put("id", "1");
+                out.writeBytes(obj.toString());
+                out.flush();
+                out.close();
+            }
             if (conn.getResponseCode() == 200) {
                 // Receive response
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));

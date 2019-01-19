@@ -60,11 +60,16 @@ public class ArtemisHttpServer implements HttpServerRequestCallback {
         String uri = request.getPath();
         Log.d(TAG, "onRequest " + uri);
 
-        Multimap params = null;
+        Object params;
         if (request.getMethod().equals("GET")) {
             params = request.getQuery();
         } else if (request.getMethod().equals("POST")) {
-            params = ((AsyncHttpRequestBody<Multimap>)request.getBody()).get();
+            String contentType = request.getHeaders().get("Content-Type");
+            if (contentType.equals("application/json")) {
+                params = ((AsyncHttpRequestBody<JSONObject>) request.getBody()).get();
+            } else {
+                params = ((AsyncHttpRequestBody<Multimap>) request.getBody()).get();
+            }
         } else {
             Log.d(TAG,"Unsupported Method");
             return;
@@ -84,7 +89,27 @@ public class ArtemisHttpServer implements HttpServerRequestCallback {
         }
     }
 
-    private void handleDevicesRequest(Multimap params, AsyncHttpServerResponse response) {
+    private void handleDevicesRequest(Object params, AsyncHttpServerResponse response) {
+        // Print request params
+        String id = "";
+        if (params instanceof Multimap) {
+            id = ((Multimap) params).getString("id");
+            Log.d(TAG, "[Multimap] id=" + id);
+        } else if (params instanceof JSONObject) {
+            try {
+                Log.d(TAG, params.toString());
+                id = ((JSONObject) params).getString("id");
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
+            }
+            Log.d(TAG, "[JSONObject] id=" + id);
+        } else {
+            Log.e(TAG, "Invalid request params");
+            return;
+        }
+
+        // Send JSON format response
         try {
             JSONObject item1 = new JSONObject();
             item1.put("name", "D1");
@@ -106,7 +131,7 @@ public class ArtemisHttpServer implements HttpServerRequestCallback {
         }
     }
 
-    private void handleInvalidRequest(Multimap params, AsyncHttpServerResponse response) {
+    private void handleInvalidRequest(Object params, AsyncHttpServerResponse response) {
         JSONObject json = new JSONObject();
         try {
             json.put("error", "Invalid API");
